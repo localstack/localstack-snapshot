@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "localstack-snapshot"
+authors = [
+    { name = "LocalStack Contributors", email = "info@localstack.cloud" }
+]
+version = "0.1.0"
+description = "Extracted snapshot testing lib for LocalStack"
+dependencies = [
+    "jsonpath-ng==1.5.3",  # TODO: resolve this pin
+    "deepdiff",
+    "botocore",
+]
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dynamic = ["readme"]
+
+
+[project.optional-dependencies]
+dev = [
+    "black==23.10.0",
+    "pytest>=7.0",
+    "coverage[toml]>=5.0.0",
+    "ruff==0.1.0"
+]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[tool.setuptools.packages.find]
+include = ["localstack_snapshot*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md"]
+
+[tool.black]
+line_length = 100
+include = '((localstack_snapshot)/.*\.py$|tests/.*\.py$)'
+#extend_exclude = '()'
+
+[tool.ruff]
+# Always generate Python 3.10-compatible code.
+target-version = "py310"
+line-length = 110
+select = ["B", "C", "E", "F", "I", "W", "T", "B9"]
+ignore = [
+    "E501", # E501 Line too long - handled by black, see https://docs.astral.sh/ruff/faq/#is-ruff-compatible-with-black
+]
+exclude = [
+    ".venv*",
+    "venv*",
+    "dist",
+    "build",
+    "target",
+    "*.egg-info",
+    ".git",
+]
