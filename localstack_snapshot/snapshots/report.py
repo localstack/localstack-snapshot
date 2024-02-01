@@ -5,9 +5,28 @@ from localstack_snapshot.snapshots import SnapshotMatchResult
 LOG = logging.getLogger(__file__)
 
 _esctable = {
-    'black': 30, 'red': 31, 'green': 32, 'yellow': 33, 'blue': 34, 'purple': 35, 'cyan': 36, 'white': 37,
-    'Black': 40, 'Red': 41, 'Green': 42, 'Yellow': 43, 'Blue': 44, 'Purple': 45, 'Cyan': 46, 'White': 47,
-    'bold': 1, 'light': 2, 'blink': 5, 'invert': 7, 'strikethrough': 9, 'underlined': 4
+    "black": 30,
+    "red": 31,
+    "green": 32,
+    "yellow": 33,
+    "blue": 34,
+    "purple": 35,
+    "cyan": 36,
+    "white": 37,
+    "Black": 40,
+    "Red": 41,
+    "Green": 42,
+    "Yellow": 43,
+    "Blue": 44,
+    "Purple": 45,
+    "Cyan": 46,
+    "White": 47,
+    "bold": 1,
+    "light": 2,
+    "blink": 5,
+    "invert": 7,
+    "strikethrough": 9,
+    "underlined": 4,
 }
 
 

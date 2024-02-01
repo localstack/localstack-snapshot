@@ -1,7 +1,11 @@
 from re import Pattern
 from typing import Optional
 
-from localstack_snapshot.snapshots.transformer import KeyValueBasedTransformer, JsonpathTransformer, RegexTransformer
+from localstack_snapshot.snapshots.transformer import (
+    JsonpathTransformer,
+    KeyValueBasedTransformer,
+    RegexTransformer,
+)
 
 
 def _replace_camel_string_with_hyphen(input_string: str):
