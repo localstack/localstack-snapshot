@@ -27,7 +27,7 @@ lint:
 	$(VENV_RUN); python -m ruff check --show-source . && python -m black --check .
 
 test: venv
-	$(VENV_RUN); python -m pytest --cov $(ROOT_MODULE)
+	$(VENV_RUN); python -m pytest tests
 
 test-coverage: venv
 	$(VENV_RUN); coverage run --source=$(ROOT_MODULE) -m pytest tests && coverage lcov -o .coverage.lcov
