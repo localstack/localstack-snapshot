@@ -15,6 +15,7 @@ from localstack_snapshot.snapshots import SnapshotAssertionError, SnapshotSessio
 from localstack_snapshot.snapshots.report import render_report
 
 
+# TODO: move?
 def is_aws():
     return os.environ.get("TEST_TARGET", "") == "AWS_CLOUD"
 
