@@ -7,7 +7,7 @@ name = "localstack-snapshot"
 authors = [
     { name = "LocalStack Contributors", email = "info@localstack.cloud" }
 ]
-version = "0.1.0"
+version = "0.1.1"
 description = "Extracted snapshot testing lib for LocalStack"
 dependencies = [
     "jsonpath-ng>1.6",
