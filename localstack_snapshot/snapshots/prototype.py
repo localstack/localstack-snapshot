@@ -339,7 +339,7 @@ class SnapshotSession:
 
         def build_full_path_nodes(field_match: DatumInContext):
             """Traverse the matched Datum to build the path field by field"""
-            full_path_nodes = [str(field_match.path)]
+            full_path_nodes = [str(field_match.path).replace("'", "")]
             next_node = field_match
             while next_node.context is not None:
                 full_path_nodes.append(str(next_node.context.path))
