@@ -16,6 +16,10 @@ SNAPSHOT_LOGGER.setLevel(logging.DEBUG if os.environ.get("DEBUG_SNAPSHOT") else 
 GlobalReplacementFn = Callable[[str], str]
 
 
+class TransformerException(Exception):
+    pass
+
+
 class TransformContext:
     _cache: dict
     replacements: list[GlobalReplacementFn]
@@ -43,6 +47,19 @@ class TransformContext:
 def _register_serialized_reference_replacement(
     transform_context: TransformContext, *, reference_value: str, replacement: str
 ):
+    # Provide a better error message for the TypeError if the reference value is not iterable (e.g., float)
+    # Example: `TypeError: argument of type 'float' is not iterable`
+    # Using a list would throw an AttributeError because `.replace` is not applicable.
+    # The snapshot library currently only supports strings for reference replacements
+    if not isinstance(reference_value, str):
+        message = (
+            f"The reference value {reference_value} of type {type(reference_value)} is not a string."
+            f" Consider using `reference_replacement=False` in your transformer"
+            f" for the replacement {replacement} because reference replacements are only supported for strings."
+        )
+        SNAPSHOT_LOGGER.error(message)
+        raise TransformerException(message)
+
     if '"' in reference_value:
         reference_value = reference_value.replace('"', '\\"')
 
