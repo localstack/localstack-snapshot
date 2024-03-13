@@ -49,18 +49,19 @@ def _register_serialized_reference_replacement(
 ):
     # Provide a better error message for the TypeError if the reference value is not iterable (e.g., float)
     # Example: `TypeError: argument of type 'float' is not iterable`
-    # The snapshot library currently does not support reference replacements for non-string types.
-    try:
-        if '"' in reference_value:
-            reference_value = reference_value.replace('"', '\\"')
-    except TypeError as e:
+    # Using a list would throw an AttributeError because `.replace` is not applicable.
+    # The snapshot library currently only supports strings for reference replacements
+    if not isinstance(reference_value, str):
         message = (
-            f"Reference value {reference_value} of type {type(reference_value)} is not iterable."
+            f"The reference value {reference_value} of type {type(reference_value)} is not a string."
             f" Consider using `reference_replacement=False` in your transformer"
-            f" for the replacement {replacement}."
+            f" for the replacement {replacement} because reference replacements are only supported for strings."
         )
-        SNAPSHOT_LOGGER.error(message, exc_info=True)
-        raise TransformerException(message) from e
+        SNAPSHOT_LOGGER.error(message)
+        raise TransformerException(message)
+
+    if '"' in reference_value:
+        reference_value = reference_value.replace('"', '\\"')
 
     cache = transform_context._cache.setdefault("regexcache", set())
     cache_key = reference_value
