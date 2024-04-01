@@ -37,6 +37,37 @@ class TestSnapshotManager:
         sm.match("key_a", {"aaa": "something", "bbb": "something hello"})
         sm._assert_all()
 
+    def test_match_object_nochange(self):
+        class CustomObject:
+            def __init__(self, name, nested=False):
+                self.name = name
+                if nested:
+                    self.nested = CustomObject(f"nested{name}")
+                    self.listed = [CustomObject(f"listed{name}"), "otherobj"]
+
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {
+            "key_a": {
+                "name": "myname",
+                "nested": {"name": "nestedmyname"},
+                "listed": [{"name": "listedmyname"}, "otherobj"],
+            }
+        }
+        sm.match_object("key_a", CustomObject(name="myname", nested=True))
+        sm._assert_all()
+
+    def test_match_object_change(self):
+        class CustomObject:
+            def __init__(self, name):
+                self.name = name
+
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"name": "myname"}}
+        sm.match_object("key_a", CustomObject(name="diffname"))
+        with pytest.raises(Exception) as ctx:
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
     # def test_context_replacement_no_change(self):
     #     sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
     #     sm.add_transformer(TransformerUtility.key_value("name"))
