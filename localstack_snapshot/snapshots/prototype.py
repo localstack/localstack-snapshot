@@ -168,7 +168,10 @@ class SnapshotSession:
         def _convert_object_to_dict(obj_):
             if isinstance(obj_, dict):
                 for key in list(obj_.keys()):
-                    obj_[key] = _convert_object_to_dict(obj_[key])
+                    if key.startswith("_"):
+                        del obj_[key]
+                    else:
+                        obj_[key] = _convert_object_to_dict(obj_[key])
             elif isinstance(obj_, list):
                 for idx, val in enumerate(obj_):
                     obj_[idx] = _convert_object_to_dict(val)

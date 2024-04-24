@@ -56,6 +56,17 @@ class TestSnapshotManager:
         sm.match_object("key_a", CustomObject(name="myname", nested=True))
         sm._assert_all()
 
+    def test_match_object_ignore_private_values(self):
+        class CustomObject:
+            def __init__(self, name):
+                self.name = name
+                self._internal = "n/a"
+
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"name": "myname"}}
+        sm.match_object("key_a", CustomObject(name="myname"))
+        sm._assert_all()
+
     def test_match_object_change(self):
         class CustomObject:
             def __init__(self, name):
