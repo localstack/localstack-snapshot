@@ -164,6 +164,23 @@ class SnapshotSession:
     def _update(self, key: str, obj_state: dict) -> None:
         self.observed_state[key] = obj_state
 
+    def match_object(self, key: str, obj: object) -> None:
+        def _convert_object_to_dict(obj_):
+            if isinstance(obj_, dict):
+                for key in list(obj_.keys()):
+                    if key.startswith("_"):
+                        del obj_[key]
+                    else:
+                        obj_[key] = _convert_object_to_dict(obj_[key])
+            elif isinstance(obj_, list):
+                for idx, val in enumerate(obj_):
+                    obj_[idx] = _convert_object_to_dict(val)
+            elif hasattr(obj_, "__dict__"):
+                return _convert_object_to_dict(obj_.__dict__)
+            return obj_
+
+        return self.match(key, _convert_object_to_dict(obj))
+
     def match(self, key: str, obj: dict) -> None:
         if key in self.called_keys:
             raise Exception(
