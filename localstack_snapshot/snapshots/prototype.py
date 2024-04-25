@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import os
@@ -7,7 +8,6 @@ from pathlib import Path
 from re import Pattern
 from typing import Dict, List, Optional
 
-from botocore.response import StreamingBody
 from deepdiff import DeepDiff
 from jsonpath_ng import DatumInContext
 from jsonpath_ng.ext import parse
@@ -260,11 +260,10 @@ class SnapshotSession:
     def _transform_dict_to_parseable_values(self, original):
         """recursively goes through dict and tries to resolve values to strings (& parse them as json if possible)"""
         for k, v in original.items():
-            if isinstance(v, StreamingBody):
+            if isinstance(v, io.IOBase):
                 # update v for json parsing below
-                original[k] = v = v.read().decode(
-                    "utf-8"
-                )  # TODO: patch boto client so this doesn't break any further read() calls
+                # TODO: patch boto client so this doesn't break any further read() calls
+                original[k] = v = v.read().decode("utf-8")
             if isinstance(v, list) and v:
                 for item in v:
                     if isinstance(item, dict):

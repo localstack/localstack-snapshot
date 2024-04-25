@@ -1,3 +1,5 @@
+import io
+
 import pytest
 
 from localstack_snapshot.snapshots import SnapshotSession
@@ -19,6 +21,12 @@ class TestSnapshotManager:
         with pytest.raises(Exception) as ctx:
             sm._assert_all()
         ctx.match("Parity snapshot failed")
+
+    def test_diff_with_io_stream(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"a": "data"}}
+        sm.match("key_a", {"a": io.BytesIO(b"data")})
+        sm._assert_all()
 
     def test_multiple_assertmatch_with_same_key_fail(self):
         sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
