@@ -344,3 +344,19 @@ class TimestampTransformer:
 
     def _transform_list(self, input_data: list, ctx: TransformContext = None) -> list:
         return [self._transform(e, ctx=ctx) for e in input_data]
+
+
+class TextTransformer:
+    def __init__(self, text: str, replacement: str):
+        self.text = text
+        self.replacement = replacement
+
+    def transform(self, input_data: dict, *, ctx: TransformContext) -> dict:
+        def replace_val(s):
+            return s.replace(self.text, self.replacement)
+
+        ctx.register_serialized_replacement(replace_val)
+        SNAPSHOT_LOGGER.debug(
+            f"Registering text pattern '{self.text}' in snapshot with '{self.replacement}'"
+        )
+        return input_data

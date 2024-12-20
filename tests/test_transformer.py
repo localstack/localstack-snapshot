@@ -211,6 +211,31 @@ class TestTransformer:
         output = transformer.transform(input, ctx=ctx)
         assert output == expected
 
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "a+b",
+            "question?",
+            "amount: $4.00",
+            "emoji: ^^",
+            "sentence.",
+            "others (like so)",
+            "special {char}",
+        ],
+    )
+    def test_text(self, value):
+        input = {"key": f"some {value} with more text"}
+
+        expected = {"key": "some <value> with more text"}
+
+        transformer = TransformerUtility.text(value, "<value>")
+
+        ctx = TransformContext()
+        output = transformer.transform(json.dumps(input), ctx=ctx)
+        for sr in ctx.serialized_replacements:
+            output = sr(output)
+        assert json.loads(output) == expected
+
 
 class TestTimestampTransformer:
     def test_generic_timestamp_transformer(self):
