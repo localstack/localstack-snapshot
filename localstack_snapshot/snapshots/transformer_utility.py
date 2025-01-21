@@ -5,6 +5,7 @@ from localstack_snapshot.snapshots.transformer import (
     JsonpathTransformer,
     KeyValueBasedTransformer,
     RegexTransformer,
+    TextTransformer,
 )
 
 
@@ -67,3 +68,16 @@ class TransformerUtility:
         :return: RegexTransformer
         """
         return RegexTransformer(regex, replacement)
+
+    @staticmethod
+    def text(text: str, replacement: str):
+        """Creates a new TextTransformer. All occurrences in the string-converted dict will be replaced.
+
+        Useful if the text contains special characters that would confuse the RegexTransformer, like '+' or '('.
+
+        :param text: the text that should be replaced
+        :param replacement: the value which will replace the original value.
+
+        :return: TextTransformer
+        """
+        return TextTransformer(text, replacement)
