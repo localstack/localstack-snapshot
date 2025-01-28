@@ -1,8 +1,10 @@
 import copy
+import json
 import logging
 import os
 import re
 from datetime import datetime
+from json import JSONDecodeError
 from re import Pattern
 from typing import Any, Callable, Optional, Protocol
 
@@ -384,4 +386,14 @@ class JsonStringTransformer:
         self.key = key
 
     def transform(self, input_data: dict, *, ctx: TransformContext) -> dict:
+        for k, v in input_data.items():
+            if k == self.key:
+                if isinstance(v, str):
+                    try:
+                        json_value = json.loads(v)
+                        input_data[k] = json_value
+                    except JSONDecodeError:
+                        SNAPSHOT_LOGGER.warning(
+                            f'The value mapped to "{k}" key is not a valid JSON string and won\'t be transformed'
+                        )
         return input_data
