@@ -312,15 +312,33 @@ class TestTransformer:
             output = sr(output)
         assert json.loads(output) == expected
 
-    def test_json_string(self):
+    @pytest.mark.parametrize(
+        "input_value,transformed_value",
+        [
+            pytest.param('{"a": "b"}', {"a": "b"}, id="simple_json_object"),
+            pytest.param('{\n    "a": "b"\n}', {"a": "b"}, id="formatted_json_object"),
+            pytest.param('{"a": 42}malformed', '{"a": 42}malformed', id="malformed_json"),
+            pytest.param('["a", "b"]', ["a", "b"], id="simple_json_list"),
+            pytest.param('{"a": "{\\"b\\":42}"}', {"a": {"b": 42}}, id="nested_json_object"),
+            pytest.param(
+                '{"a": "[{\\"b\\":\\"c\\"}]"}', {"a": [{"b": "c"}]}, id="nested_json_list"
+            ),
+            pytest.param(
+                '{"a": "{\\"b\\":42malformed}"}',
+                {"a": '{"b":42malformed}'},
+                id="malformed_nested_json",
+            ),
+        ],
+    )
+    def test_json_string(self, input_value, transformed_value):
         key = "key"
-        input = {key: '{"a":"b"}'}
-        expected = {key: {"a": "b"}}
+        input_data = {key: input_value}
+        expected = {key: transformed_value}
 
         transformer = JsonStringTransformer(key)
 
         ctx = TransformContext()
-        output = transformer.transform(input, ctx=ctx)
+        output = transformer.transform(input_data, ctx=ctx)
 
         assert output == expected
 
