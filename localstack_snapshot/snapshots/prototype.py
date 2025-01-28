@@ -271,16 +271,10 @@ class SnapshotSession:
             if isinstance(v, Dict):
                 self._transform_dict_to_parseable_values(v)
 
-            if isinstance(v, str) and (v.startswith("{") or v.startswith("[")):
+            if isinstance(v, str) and v.startswith("{"):
                 try:
                     json_value = json.loads(v)
                     original[k] = json_value
-                    if isinstance(json_value, list) and json_value:
-                        for item in json_value:
-                            if isinstance(item, dict):
-                                self._transform_dict_to_parseable_values(item)
-                    if isinstance(json_value, Dict):
-                        self._transform_dict_to_parseable_values(json_value)
                 except JSONDecodeError:
                     pass  # parsing error can be ignored
 
