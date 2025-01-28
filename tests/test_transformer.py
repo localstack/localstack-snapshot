@@ -342,6 +342,18 @@ class TestTransformer:
 
         assert output == expected
 
+    def test_json_string_in_a_nested_key(self):
+        key = "nested-key-in-an-object-hidden-inside-a-list"
+        input_data = {"top-level-key": [{key: '{"a": "b"}'}]}
+        expected = {"top-level-key": [{key: {"a": "b"}}]}
+
+        transformer = JsonStringTransformer(key)
+
+        ctx = TransformContext()
+        output = transformer.transform(input_data, ctx=ctx)
+
+        assert output == expected
+
 
 class TestTimestampTransformer:
     def test_generic_timestamp_transformer(self):
