@@ -4,6 +4,7 @@ import json
 import pytest
 
 from localstack_snapshot.snapshots.transformer import (
+    JsonStringTransformer,
     SortingTransformer,
     TimestampTransformer,
     TransformContext,
@@ -310,6 +311,18 @@ class TestTransformer:
         for sr in ctx.serialized_replacements:
             output = sr(output)
         assert json.loads(output) == expected
+
+    def test_json_string(self):
+        key = "key"
+        input = {key: '{"a":"b"}'}
+        expected = {key: {"a": "b"}}
+
+        transformer = JsonStringTransformer(key)
+
+        ctx = TransformContext()
+        output = transformer.transform(input, ctx=ctx)
+
+        assert output == expected
 
 
 class TestTimestampTransformer:

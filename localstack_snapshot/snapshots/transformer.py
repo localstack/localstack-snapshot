@@ -375,3 +375,13 @@ class TextTransformer:
             f"Registering text pattern '{self.text}' in snapshot with '{self.replacement}'"
         )
         return input_data
+
+
+class JsonStringTransformer:
+    key: str
+
+    def __init__(self, key: str):
+        self.key = key
+
+    def transform(self, input_data: dict, *, ctx: TransformContext) -> dict:
+        return input_data
