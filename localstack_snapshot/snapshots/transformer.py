@@ -391,9 +391,23 @@ class JsonStringTransformer:
                 if isinstance(v, str):
                     try:
                         json_value = json.loads(v)
-                        input_data[k] = json_value
+                        input_data[k] = self._transform_nested(json_value)
                     except JSONDecodeError:
                         SNAPSHOT_LOGGER.warning(
                             f'The value mapped to "{k}" key is not a valid JSON string and won\'t be transformed'
                         )
+        return input_data
+
+    def _transform_nested(self, input_data: Any):
+        if isinstance(input_data, list):
+            input_data = [self._transform_nested(item) for item in input_data]
+        if isinstance(input_data, dict):
+            for k, v in input_data.items():
+                input_data[k] = self._transform_nested(v)
+        if isinstance(input_data, str) and input_data.startswith(("{", "[")):
+            try:
+                json_value = json.loads(input_data)
+                input_data = self._transform_nested(json_value)
+            except JSONDecodeError:
+                pass  # parsing nested JSON strings is a best effort rather than requirement, so no error message here
         return input_data
