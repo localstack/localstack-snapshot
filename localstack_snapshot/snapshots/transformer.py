@@ -380,6 +380,11 @@ class TextTransformer:
 
 
 class JsonStringTransformer:
+    """
+    Parses JSON string at key.
+    Additionally, attempts to parse any JSON strings inside the parsed JSON
+    """
+
     key: str
 
     def __init__(self, key: str):
@@ -413,11 +418,12 @@ class JsonStringTransformer:
     def _transform_list(self, input_data: list, ctx: TransformContext = None) -> list:
         return [self._transform(item, ctx=ctx) for item in input_data]
 
-    def _transform_nested(self, input_data: Any):
+    def _transform_nested(self, input_data: Any) -> Any:
         """
-        Attempts to parse any additional JSON strings inside parsed JSON
-        :param input_data:
-        :return:
+        Separate method from the main `_transform_dict` one because
+        it checks every string while the main one attempts to load at specified key only.
+        This one is implicit, best-effort attempt,
+        while the main one is explicit about at which key transform should happen
         """
         if isinstance(input_data, list):
             input_data = [self._transform_nested(item) for item in input_data]
