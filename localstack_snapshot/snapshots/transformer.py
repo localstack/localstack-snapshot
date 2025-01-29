@@ -430,7 +430,7 @@ class JsonStringTransformer:
         if isinstance(input_data, dict):
             for k, v in input_data.items():
                 input_data[k] = self._transform_nested(v)
-        if isinstance(input_data, str) and input_data.startswith(("{", "[")):
+        if isinstance(input_data, str) and input_data.strip().startswith(("{", "[")):
             try:
                 json_value = json.loads(input_data)
                 input_data = self._transform_nested(json_value)

@@ -316,10 +316,16 @@ class TestTransformer:
         "input_value,transformed_value",
         [
             pytest.param('{"a": "b"}', {"a": "b"}, id="simple_json_object"),
-            pytest.param('{\n    "a": "b"\n}', {"a": "b"}, id="formatted_json_object"),
+            pytest.param('{\n  "a": "b"\n}', {"a": "b"}, id="formatted_json_object"),
+            pytest.param('\n  {"a": "b"}', {"a": "b"}, id="json_with_whitespaces"),
             pytest.param('{"a": 42}malformed', '{"a": 42}malformed', id="malformed_json"),
             pytest.param('["a", "b"]', ["a", "b"], id="simple_json_list"),
             pytest.param('{"a": "{\\"b\\":42}"}', {"a": {"b": 42}}, id="nested_json_object"),
+            pytest.param(
+                '{"a": "\\n  {\\n  \\"b\\":42}"}',
+                {"a": {"b": 42}},
+                id="nested_formatted_json_object_with_whitespaces",
+            ),
             pytest.param(
                 '{"a": "[{\\"b\\":\\"c\\"}]"}', {"a": [{"b": "c"}]}, id="nested_json_list"
             ),
