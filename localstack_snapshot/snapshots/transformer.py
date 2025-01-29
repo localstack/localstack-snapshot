@@ -408,8 +408,8 @@ class JsonStringTransformer:
                     json_value = json.loads(v)
                     input_data[k] = self._transform_nested(json_value)
                 except JSONDecodeError:
-                    SNAPSHOT_LOGGER.warning(
-                        f'The value mapped to "{k}" key is not a valid JSON string and won\'t be transformed'
+                    SNAPSHOT_LOGGER.exception(
+                        f'Value mapped to "{k}" key is not a valid JSON string and won\'t be transformed. Value: {v}'
                     )
             else:
                 input_data[k] = self._transform(v, ctx=ctx)
@@ -435,5 +435,7 @@ class JsonStringTransformer:
                 json_value = json.loads(input_data)
                 input_data = self._transform_nested(json_value)
             except JSONDecodeError:
-                pass  # parsing nested JSON strings is a best effort rather than requirement, so no error message here
+                SNAPSHOT_LOGGER.debug(
+                    f"The value is not a valid JSON string and won't be transformed. The value: {input_data}"
+                )
         return input_data
