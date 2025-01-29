@@ -272,6 +272,8 @@ class SnapshotSession:
                 self._transform_dict_to_parseable_values(v)
 
             if isinstance(v, str) and v.startswith("{"):
+                # Doesn't handle JSON arrays and nested JSON strings. See JsonStringTransformer.
+                # TODO for the major release consider having JSON parsing in one place only: either here or in JsonStringTransformer
                 try:
                     json_value = json.loads(v)
                     original[k] = json_value
