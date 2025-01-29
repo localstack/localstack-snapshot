@@ -385,20 +385,40 @@ class JsonStringTransformer:
     def __init__(self, key: str):
         self.key = key
 
-    def transform(self, input_data: dict, *, ctx: TransformContext) -> dict:
-        for k, v in input_data.items():
-            if k == self.key:
-                if isinstance(v, str):
-                    try:
-                        json_value = json.loads(v)
-                        input_data[k] = self._transform_nested(json_value)
-                    except JSONDecodeError:
-                        SNAPSHOT_LOGGER.warning(
-                            f'The value mapped to "{k}" key is not a valid JSON string and won\'t be transformed'
-                        )
+    def transform(self, input_data: dict, *, ctx: TransformContext = None) -> dict:
+        return self._transform_dict(input_data, ctx=ctx)
+
+    def _transform(self, input_data: Any, ctx: TransformContext = None) -> Any:
+        if isinstance(input_data, dict):
+            return self._transform_dict(input_data, ctx=ctx)
+        elif isinstance(input_data, list):
+            return self._transform_list(input_data, ctx=ctx)
         return input_data
 
+    def _transform_dict(self, input_data: dict, ctx: TransformContext = None) -> dict:
+        for k, v in input_data.items():
+            if k == self.key and isinstance(v, str):
+                try:
+                    SNAPSHOT_LOGGER.debug(f"Replacing string value of {k} with parsed JSON")
+                    json_value = json.loads(v)
+                    input_data[k] = self._transform_nested(json_value)
+                except JSONDecodeError:
+                    SNAPSHOT_LOGGER.warning(
+                        f'The value mapped to "{k}" key is not a valid JSON string and won\'t be transformed'
+                    )
+            else:
+                input_data[k] = self._transform(v, ctx=ctx)
+        return input_data
+
+    def _transform_list(self, input_data: list, ctx: TransformContext = None) -> list:
+        return [self._transform(item, ctx=ctx) for item in input_data]
+
     def _transform_nested(self, input_data: Any):
+        """
+        Attempts to parse any additional JSON strings inside parsed JSON
+        :param input_data:
+        :return:
+        """
         if isinstance(input_data, list):
             input_data = [self._transform_nested(item) for item in input_data]
         if isinstance(input_data, dict):
