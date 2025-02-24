@@ -20,6 +20,14 @@ def is_aws():
     return os.environ.get("TEST_TARGET", "") == "AWS_CLOUD"
 
 
+def force_skipping_snapshot_verify():
+    """
+    Forces skipping verification according to the snapshot configuration.
+    Useful when is_aws() evaluates to True, but the target is actually an LS instance.
+    """
+    return os.environ.get("TEST_FORCE_SNAPSHOT_SKIP_VERIFY", "") == "1"
+
+
 @pytest.hookimpl
 def pytest_configure(config: Config):
     config.addinivalue_line("markers", "skip_snapshot_verify")
@@ -68,7 +76,9 @@ def pytest_runtest_call(item: Item) -> None:
         verify = True
         paths = []
 
-        if not is_aws():  # only skip for local tests
+        if (
+            not is_aws() or force_skipping_snapshot_verify()
+        ):  # only skip for local tests unless overridden
             for m in item.iter_markers(name="skip_snapshot_verify"):
                 skip_paths = m.kwargs.get("paths", [])
 
