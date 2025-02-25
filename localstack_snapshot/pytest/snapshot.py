@@ -20,7 +20,6 @@ def is_aws():
     return os.environ.get("TEST_TARGET", "") == "AWS_CLOUD"
 
 
-
 @pytest.hookimpl
 def pytest_configure(config: Config):
     config.addinivalue_line("markers", "skip_snapshot_verify")
@@ -69,7 +68,7 @@ def pytest_runtest_call(item: Item) -> None:
         verify = True
         paths = []
 
-        if not is_aws():  # only skip for local tests unless overridden
+        if not is_aws():  # only skip for local tests
             for m in item.iter_markers(name="skip_snapshot_verify"):
                 skip_paths = m.kwargs.get("paths", [])
 
