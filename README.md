@@ -17,7 +17,6 @@ To install the python and other developer requirements into a venv run:
 There's a few env vars that can be used with this project:
 
 * `TEST_TARGET`: Set to `AWS_CLOUD` to use an externally-deployed instance when running tests.
-* `TEST_FORCE_SNAPSHOT_SKIP_VERIFY`: Set to `1` to force applying the snapshot filters regardless of what `TEST_TARGET` is set to.
 * `SNAPSHOT_LEGACY_REPORT`: By default set to `0`. Can be set to `1`.
 * `SNAPSHOT_UDPATE`: By default set to `0`. Can be set to `1`.
 * `SNAPSHOT_RAW`: By default set to `0`. Can be set to `1`.
