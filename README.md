@@ -12,7 +12,7 @@ To install the python and other developer requirements into a venv run:
 
     make install
 
-#### Usable env vars
+### Configuration options
 
 There's a few env vars that can be used with this project:
 
