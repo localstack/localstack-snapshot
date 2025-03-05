@@ -50,6 +50,53 @@ class TestTransformer:
 
         assert json.loads(tmp) == expected_key_value_reference
 
+    def test_key_value_replacement_custom_function(self):
+        input = {
+            "hello": "world",
+            "hello2": "again",
+            "path": {"to": {"anotherkey": "hi", "inside": {"hello": "inside"}}},
+        }
+
+        key_value = TransformerUtility.key_value_replacement_function(
+            "hello",
+            replacement_function=lambda k, v: f"placeholder({len(v)})",
+            reference_replacement=False,
+        )
+
+        expected_key_value = {
+            "hello": "placeholder(5)",
+            "hello2": "again",
+            "path": {"to": {"anotherkey": "hi", "inside": {"hello": "placeholder(6)"}}},
+        }
+
+        copied = copy.deepcopy(input)
+        ctx = TransformContext()
+        assert key_value.transform(copied, ctx=ctx) == expected_key_value
+        assert ctx.serialized_replacements == []
+
+        copied = copy.deepcopy(input)
+        key_value = TransformerUtility.key_value_replacement_function(
+            "hello",
+            replacement_function=lambda k, v: f"placeholder({len(v)})",
+            reference_replacement=True,
+        )
+        # replacement counters are per replacement key, so it will start from 1 again.
+        expected_key_value_reference = {
+            "hello": "<placeholder(5):1>",
+            "hello2": "again",
+            "path": {
+                "to": {"anotherkey": "hi", "<placeholder(6):1>": {"hello": "<placeholder(6):1>"}}
+            },
+        }
+        assert key_value.transform(copied, ctx=ctx) == copied
+        assert len(ctx.serialized_replacements) == 2
+
+        tmp = json.dumps(copied, default=str)
+        for sr in ctx.serialized_replacements:
+            tmp = sr(tmp)
+
+        assert json.loads(tmp) == expected_key_value_reference
+
     def test_key_value_replacement_with_falsy_value(self):
         input = {
             "hello": "world",

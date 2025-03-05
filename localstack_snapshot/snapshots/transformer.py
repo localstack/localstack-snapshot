@@ -184,35 +184,36 @@ class RegexTransformer:
         return input_data
 
 
-class KeyValueBasedTransformer:
+class KeyValueBasedTransformerFunctionReplacement:
     def __init__(
         self,
         match_fn: Callable[[str, Any], Optional[str]],
-        replacement: str,
+        replacement_function: [Callable[[str, Any], str]],
         replace_reference: bool = True,
     ):
         self.match_fn = match_fn
-        self.replacement = replacement
+        self.replacement_function = replacement_function
         self.replace_reference = replace_reference
 
     def transform(self, input_data: dict, *, ctx: TransformContext) -> dict:
         for k, v in input_data.items():
             if (match_result := self.match_fn(k, v)) is not None:
+                replacement = self.replacement_function(k, v)
                 if self.replace_reference:
                     _register_serialized_reference_replacement(
-                        ctx, reference_value=match_result, replacement=self.replacement
+                        ctx, reference_value=match_result, replacement=replacement
                     )
                 else:
                     if isinstance(v, str):
                         SNAPSHOT_LOGGER.debug(
-                            f"Replacing value for key '{k}': Match result '{match_result:.200s}' with '{self.replacement}'. (Original value: {str(v)})"
+                            f"Replacing value for key '{k}': Match result '{match_result:.200s}' with '{replacement}'. (Original value: {str(v)})"
                         )
-                        input_data[k] = v.replace(match_result, self.replacement)
+                        input_data[k] = v.replace(match_result, replacement)
                     else:
                         SNAPSHOT_LOGGER.debug(
-                            f"Replacing value for key '{k}' with '{self.replacement}'. (Original value: {str(v)})"
+                            f"Replacing value for key '{k}' with '{replacement}'. (Original value: {str(v)})"
                         )
-                        input_data[k] = self.replacement
+                        input_data[k] = replacement
             elif isinstance(v, list) and len(v) > 0:
                 for i in range(0, len(v)):
                     if isinstance(v[i], dict):
@@ -221,6 +222,20 @@ class KeyValueBasedTransformer:
                 input_data[k] = self.transform(v, ctx=ctx)
 
         return input_data
+
+
+class KeyValueBasedTransformer(KeyValueBasedTransformerFunctionReplacement):
+    def __init__(
+        self,
+        match_fn: Callable[[str, Any], Optional[str]],
+        replacement: str,
+        replace_reference: bool = True,
+    ):
+        super().__init__(
+            match_fn=match_fn,
+            replacement_function=lambda k, v: replacement,
+            replace_reference=replace_reference,
+        )
 
 
 class GenericTransformer:
