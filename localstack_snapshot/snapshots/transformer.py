@@ -1,8 +1,10 @@
 import copy
+import json
 import logging
 import os
 import re
 from datetime import datetime
+from json import JSONDecodeError
 from re import Pattern
 from typing import Any, Callable, Optional, Protocol
 
@@ -374,4 +376,66 @@ class TextTransformer:
         SNAPSHOT_LOGGER.debug(
             f"Registering text pattern '{self.text}' in snapshot with '{self.replacement}'"
         )
+        return input_data
+
+
+class JsonStringTransformer:
+    """
+    Parses JSON string at key.
+    Additionally, attempts to parse any JSON strings inside the parsed JSON
+    """
+
+    key: str
+
+    def __init__(self, key: str):
+        self.key = key
+
+    def transform(self, input_data: dict, *, ctx: TransformContext = None) -> dict:
+        return self._transform_dict(input_data, ctx=ctx)
+
+    def _transform(self, input_data: Any, ctx: TransformContext = None) -> Any:
+        if isinstance(input_data, dict):
+            return self._transform_dict(input_data, ctx=ctx)
+        elif isinstance(input_data, list):
+            return self._transform_list(input_data, ctx=ctx)
+        return input_data
+
+    def _transform_dict(self, input_data: dict, ctx: TransformContext = None) -> dict:
+        for k, v in input_data.items():
+            if k == self.key and isinstance(v, str):
+                try:
+                    SNAPSHOT_LOGGER.debug(f"Replacing string value of {k} with parsed JSON")
+                    json_value = json.loads(v)
+                    input_data[k] = self._transform_nested(json_value)
+                except JSONDecodeError:
+                    SNAPSHOT_LOGGER.exception(
+                        f'Value mapped to "{k}" key is not a valid JSON string and won\'t be transformed. Value: {v}'
+                    )
+            else:
+                input_data[k] = self._transform(v, ctx=ctx)
+        return input_data
+
+    def _transform_list(self, input_data: list, ctx: TransformContext = None) -> list:
+        return [self._transform(item, ctx=ctx) for item in input_data]
+
+    def _transform_nested(self, input_data: Any) -> Any:
+        """
+        Separate method from the main `_transform_dict` one because
+        it checks every string while the main one attempts to load at specified key only.
+        This one is implicit, best-effort attempt,
+        while the main one is explicit about at which key transform should happen
+        """
+        if isinstance(input_data, list):
+            input_data = [self._transform_nested(item) for item in input_data]
+        if isinstance(input_data, dict):
+            for k, v in input_data.items():
+                input_data[k] = self._transform_nested(v)
+        if isinstance(input_data, str) and input_data.strip().startswith(("{", "[")):
+            try:
+                json_value = json.loads(input_data)
+                input_data = self._transform_nested(json_value)
+            except JSONDecodeError:
+                SNAPSHOT_LOGGER.debug(
+                    f"The value is not a valid JSON string and won't be transformed. The value: {input_data}"
+                )
         return input_data
