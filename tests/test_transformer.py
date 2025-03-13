@@ -52,9 +52,15 @@ class TestTransformer:
 
     def test_key_value_replacement_custom_function(self):
         input = {
-            "hello": "world",
+            "hello": "12characters",
             "hello2": "again",
-            "path": {"to": {"anotherkey": "hi", "inside": {"hello": "inside"}}},
+            "path": {
+                "to": {
+                    "anotherkey": "hi",
+                    "twelvesymbol": {"hello": "twelvesymbol"},
+                    "fifteen_symbols": {"hello": "fifteen_symbols"},
+                }
+            },
         }
 
         key_value = TransformerUtility.key_value_replacement_function(
@@ -64,17 +70,34 @@ class TestTransformer:
         )
 
         expected_key_value = {
-            "hello": "placeholder(5)",
+            "hello": "placeholder(12)",
             "hello2": "again",
-            "path": {"to": {"anotherkey": "hi", "inside": {"hello": "placeholder(6)"}}},
+            "path": {
+                "to": {
+                    "anotherkey": "hi",
+                    "twelvesymbol": {"hello": "placeholder(12)"},
+                    "fifteen_symbols": {"hello": "placeholder(15)"},
+                }
+            },
         }
 
-        copied = copy.deepcopy(input)
         ctx = TransformContext()
-        assert key_value.transform(copied, ctx=ctx) == expected_key_value
+        assert key_value.transform(input, ctx=ctx) == expected_key_value
         assert ctx.serialized_replacements == []
 
-        copied = copy.deepcopy(input)
+    def test_key_value_replacement_custom_function_reference_replacement(self):
+        input = {
+            "hello": "12characters",
+            "hello2": "again",
+            "path": {
+                "to": {
+                    "anotherkey": "hi",
+                    "twelvesymbol": {"hello": "twelvesymbol"},
+                    "fifteen_symbols": {"hello": "fifteen_symbols"},
+                }
+            },
+        }
+
         key_value = TransformerUtility.key_value_replacement_function(
             "hello",
             replacement_function=lambda k, v: f"placeholder({len(v)})",
@@ -82,16 +105,21 @@ class TestTransformer:
         )
         # replacement counters are per replacement key, so it will start from 1 again.
         expected_key_value_reference = {
-            "hello": "<placeholder(5):1>",
+            "hello": "<placeholder(12):1>",
             "hello2": "again",
             "path": {
-                "to": {"anotherkey": "hi", "<placeholder(6):1>": {"hello": "<placeholder(6):1>"}}
+                "to": {
+                    "anotherkey": "hi",
+                    "<placeholder(12):2>": {"hello": "<placeholder(12):2>"},
+                    "<placeholder(15):1>": {"hello": "<placeholder(15):1>"},
+                }
             },
         }
-        assert key_value.transform(copied, ctx=ctx) == copied
-        assert len(ctx.serialized_replacements) == 2
+        ctx = TransformContext()
+        assert key_value.transform(input, ctx=ctx) == input
+        assert len(ctx.serialized_replacements) == 3
 
-        tmp = json.dumps(copied, default=str)
+        tmp = json.dumps(input, default=str)
         for sr in ctx.serialized_replacements:
             tmp = sr(tmp)
 
