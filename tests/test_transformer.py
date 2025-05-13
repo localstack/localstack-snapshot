@@ -334,6 +334,9 @@ class TestTransformer:
                 {"a": '{"b":42malformed}'},
                 id="malformed_nested_json",
             ),
+            pytest.param("[]", [], id="empty_list"),
+            pytest.param("{}", {}, id="empty_object"),
+            pytest.param("", "", id="empty_string"),
         ],
     )
     def test_json_string(self, input_value, transformed_value):
