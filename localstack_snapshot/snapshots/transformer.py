@@ -415,7 +415,7 @@ class JsonStringTransformer:
 
     def _transform_dict(self, input_data: dict, ctx: TransformContext = None) -> dict:
         for k, v in input_data.items():
-            if k == self.key and isinstance(v, str):
+            if k == self.key and isinstance(v, str) and v.strip().startswith(("{", "[")):
                 try:
                     SNAPSHOT_LOGGER.debug(f"Replacing string value of {k} with parsed JSON")
                     json_value = json.loads(v)
