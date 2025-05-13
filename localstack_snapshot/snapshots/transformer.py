@@ -381,8 +381,21 @@ class TextTransformer:
 
 class JsonStringTransformer:
     """
-    Parses JSON string at key.
+    Parses JSON string at the specified key.
     Additionally, attempts to parse any JSON strings inside the parsed JSON
+
+    This transformer complements the default parsing of JSON strings in
+    localstack_snapshot.snapshots.prototype.SnapshotSession._transform_dict_to_parseable_values
+
+    Shortcomings of the default parser that this transformer addresses:
+    - parsing of nested JSON strings '{"a": "{\\"b\\":42}"}'
+    - parsing of JSON arrays at the specified key, e.g. '["a", "b"]'
+
+    Such parsing allows applying transformations further to the elements of the parsed JSON - timestamps, ARNs, etc.
+
+    Such parsing is not done by default because it's not a common use case.
+    Whether to parse a JSON string or not should be decided by the user on a case by case basis.
+    Limited general parsing that we already have is preserved for backwards compatibility.
     """
 
     key: str
