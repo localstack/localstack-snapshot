@@ -3,9 +3,11 @@ from typing import Any, Callable, Optional
 
 from localstack_snapshot.snapshots.transformer import (
     JsonpathTransformer,
+    JsonStringTransformer,
     KeyValueBasedTransformer,
     KeyValueBasedTransformerFunctionReplacement,
     RegexTransformer,
+    SortingTransformer,
     TextTransformer,
 )
 
@@ -109,3 +111,27 @@ class TransformerUtility:
         :return: TextTransformer
         """
         return TextTransformer(text, replacement)
+
+    @staticmethod
+    def json_string(key: str) -> JsonStringTransformer:
+        """Creates a new JsonStringTransformer. If there is a valid JSON text string at specified key
+        it will be loaded as a regular object or array.
+
+        :param key: key at which JSON string is expected
+
+        :return: JsonStringTransformer
+        """
+        return JsonStringTransformer(key)
+
+    @staticmethod
+    def sorting(key: str, sorting_fn: Optional[Callable[[...], Any]]) -> SortingTransformer:
+        """Creates a new SortingTransformer.
+
+        Sorts a list at `key` with the given `sorting_fn` (argument for `sorted(list, key=sorting_fn)`)
+
+        :param key: key at which the list to sort is expected
+        :param sorting_fn: sorting function
+
+        :return: SortingTransformer
+        """
+        return SortingTransformer(key, sorting_fn)

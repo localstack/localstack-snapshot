@@ -4,6 +4,7 @@ import json
 import pytest
 
 from localstack_snapshot.snapshots.transformer import (
+    JsonStringTransformer,
     SortingTransformer,
     TimestampTransformer,
     TransformContext,
@@ -310,6 +311,57 @@ class TestTransformer:
         for sr in ctx.serialized_replacements:
             output = sr(output)
         assert json.loads(output) == expected
+
+    @pytest.mark.parametrize(
+        "input_value,transformed_value",
+        [
+            pytest.param('{"a": "b"}', {"a": "b"}, id="simple_json_object"),
+            pytest.param('{\n  "a": "b"\n}', {"a": "b"}, id="formatted_json_object"),
+            pytest.param('\n  {"a": "b"}', {"a": "b"}, id="json_with_whitespaces"),
+            pytest.param('{"a": 42}malformed', '{"a": 42}malformed', id="malformed_json"),
+            pytest.param('["a", "b"]', ["a", "b"], id="simple_json_list"),
+            pytest.param('{"a": "{\\"b\\":42}"}', {"a": {"b": 42}}, id="nested_json_object"),
+            pytest.param(
+                '{"a": "\\n  {\\n  \\"b\\":42}"}',
+                {"a": {"b": 42}},
+                id="nested_formatted_json_object_with_whitespaces",
+            ),
+            pytest.param(
+                '{"a": "[{\\"b\\":\\"c\\"}]"}', {"a": [{"b": "c"}]}, id="nested_json_list"
+            ),
+            pytest.param(
+                '{"a": "{\\"b\\":42malformed}"}',
+                {"a": '{"b":42malformed}'},
+                id="malformed_nested_json",
+            ),
+            pytest.param("[]", [], id="empty_list"),
+            pytest.param("{}", {}, id="empty_object"),
+            pytest.param("", "", id="empty_string"),
+        ],
+    )
+    def test_json_string(self, input_value, transformed_value):
+        key = "key"
+        input_data = {key: input_value}
+        expected = {key: transformed_value}
+
+        transformer = JsonStringTransformer(key)
+
+        ctx = TransformContext()
+        output = transformer.transform(input_data, ctx=ctx)
+
+        assert output == expected
+
+    def test_json_string_in_a_nested_key(self):
+        key = "nested-key-in-an-object-hidden-inside-a-list"
+        input_data = {"top-level-key": [{key: '{"a": "b"}'}]}
+        expected = {"top-level-key": [{key: {"a": "b"}}]}
+
+        transformer = JsonStringTransformer(key)
+
+        ctx = TransformContext()
+        output = transformer.transform(input_data, ctx=ctx)
+
+        assert output == expected
 
 
 class TestTimestampTransformer:
