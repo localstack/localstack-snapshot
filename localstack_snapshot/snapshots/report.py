@@ -1,4 +1,5 @@
 import logging
+import re
 
 from localstack_snapshot.snapshots import SnapshotMatchResult
 
@@ -29,6 +30,8 @@ _esctable = {
     "underlined": 4,
 }
 
+_special_json_path_chars_regex = re.compile("[a-zA-Z0-9_-]+")
+
 
 class PatchPath(str):
     """
@@ -52,7 +55,11 @@ def _format_json_path(path: list):
     json_str = "$.."
     for idx, elem in enumerate(path):
         if not isinstance(elem, int):
-            json_str += str(elem)
+            _elem = str(elem)
+            # we want to wrap in single quotes parts with special characters so that users can copy-paste them directly
+            if not _special_json_path_chars_regex.fullmatch(_elem):
+                _elem = f"'{_elem}'"
+            json_str += _elem
         if idx < len(path) - 1 and not json_str.endswith(".."):
             json_str += "."
 

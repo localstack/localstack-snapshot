@@ -209,6 +209,14 @@ def test_json_diff_format():
     assert _format_json_path(path) == '"$.."'
     path = [1, 1, 0, "SomeKey"]
     assert _format_json_path(path) == '"$..SomeKey"'
+    path = ["Some:Key"]
+    assert _format_json_path(path) == "\"$..'Some:Key'\""
+    path = ["Some.Key"]
+    assert _format_json_path(path) == "\"$..'Some.Key'\""
+    path = ["Some-Key"]
+    assert _format_json_path(path) == '"$..Some-Key"'
+    path = ["Some0Key"]
+    assert _format_json_path(path) == '"$..Some0Key"'
 
 
 def test_sorting_transformer():
