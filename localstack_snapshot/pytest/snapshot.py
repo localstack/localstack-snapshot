@@ -71,8 +71,17 @@ def pytest_runtest_call(item: Item) -> None:
         if not is_aws():  # only skip for local tests
             for m in item.iter_markers(name="skip_snapshot_verify"):
                 skip_paths = m.kwargs.get("paths", [])
-
                 skip_condition = m.kwargs.get("condition")
+
+                if not (skip_paths or skip_condition) and m.args:
+                    (skip_paths, *_skip_condition) = m.args
+                    if _skip_condition:
+                        skip_condition, *_ = _skip_condition
+
+                if skip_paths:
+                    if not isinstance(skip_paths, list):
+                        raise ValueError("paths must be a list")
+
                 # can optionally include a condition, when this will be skipped
                 # a condition must be a Callable returning something truthy/falsey
                 if skip_condition:
