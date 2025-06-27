@@ -30,7 +30,7 @@ _esctable = {
     "underlined": 4,
 }
 
-_special_json_path_chars_regex = re.compile("[a-zA-Z0-9_-]+")
+_regular_json_path_chars_regex = re.compile("[a-zA-Z0-9_-]+")
 
 
 class PatchPath(str):
