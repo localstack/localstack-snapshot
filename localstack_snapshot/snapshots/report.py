@@ -57,7 +57,7 @@ def _format_json_path(path: list):
         if not isinstance(elem, int):
             _elem = str(elem)
             # we want to wrap in single quotes parts with special characters so that users can copy-paste them directly
-            if not _special_json_path_chars_regex.fullmatch(_elem):
+            if not _regular_json_path_chars_regex.fullmatch(_elem):
                 _elem = f"'{_elem}'"
             json_str += _elem
         if idx < len(path) - 1 and not json_str.endswith(".."):
