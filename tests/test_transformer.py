@@ -5,6 +5,7 @@ import pytest
 
 from localstack_snapshot.snapshots.transformer import (
     JsonStringTransformer,
+    ResponseMetaDataTransformer,
     SortingTransformer,
     TimestampTransformer,
     TransformContext,
@@ -405,3 +406,81 @@ class TestTimestampTransformer:
         ctx = TransformContext()
         output = transformer.transform(input, ctx=ctx)
         assert output == expected
+
+
+class TestResponseMetaDataTransformer:
+    def test_with_headers(self):
+        input_data = {"ResponseMetadata": {"HTTPHeaders": {"header1": "value1"}}}
+
+        metadata_transformer = ResponseMetaDataTransformer()
+
+        expected_key_value = {"ResponseMetadata": {"HTTPHeaders": {}}}
+
+        copied = copy.deepcopy(input_data)
+        ctx = TransformContext()
+        assert metadata_transformer.transform(copied, ctx=ctx) == expected_key_value
+        assert ctx.serialized_replacements == []
+
+    def test_with_headers_and_status_code(self):
+        input_data = {
+            "ResponseMetadata": {"HTTPHeaders": {"header1": "value1"}, "HTTPStatusCode": 500}
+        }
+
+        metadata_transformer = ResponseMetaDataTransformer()
+
+        expected_key_value = {"ResponseMetadata": {"HTTPHeaders": {}, "HTTPStatusCode": 500}}
+
+        copied = copy.deepcopy(input_data)
+        ctx = TransformContext()
+        assert metadata_transformer.transform(copied, ctx=ctx) == expected_key_value
+        assert ctx.serialized_replacements == []
+
+    def test_with_status_code_only(self):
+        input_data = {"ResponseMetadata": {"HTTPStatusCode": 500, "RandomData": "random"}}
+
+        metadata_transformer = ResponseMetaDataTransformer()
+
+        expected_key_value = {"ResponseMetadata": {"HTTPStatusCode": 500, "RandomData": "random"}}
+
+        copied = copy.deepcopy(input_data)
+        ctx = TransformContext()
+        assert metadata_transformer.transform(copied, ctx=ctx) == expected_key_value
+        assert ctx.serialized_replacements == []
+
+    def test_with_empty_response_metadata(self):
+        input_data = {"ResponseMetadata": {"NotHeaders": "data"}}
+
+        metadata_transformer = ResponseMetaDataTransformer()
+
+        expected_key_value = {"ResponseMetadata": {"NotHeaders": "data"}}
+
+        copied = copy.deepcopy(input_data)
+        ctx = TransformContext()
+        assert metadata_transformer.transform(copied, ctx=ctx) == expected_key_value
+        assert ctx.serialized_replacements == []
+
+    def test_with_headers_wrong_type(self):
+        input_data = {"ResponseMetadata": {"HTTPHeaders": "data"}}
+
+        metadata_transformer = ResponseMetaDataTransformer()
+
+        expected_key_value = {"ResponseMetadata": {"HTTPHeaders": "data"}}
+
+        copied = copy.deepcopy(input_data)
+        ctx = TransformContext()
+        assert metadata_transformer.transform(copied, ctx=ctx) == expected_key_value
+        assert ctx.serialized_replacements == []
+
+    def test_headers_filtering(self):
+        input_data = {
+            "ResponseMetadata": {"HTTPHeaders": {"content_type": "value1", "header1": "value1"}}
+        }
+
+        metadata_transformer = ResponseMetaDataTransformer()
+
+        expected_key_value = {"ResponseMetadata": {"HTTPHeaders": {"content_type": "value1"}}}
+
+        copied = copy.deepcopy(input_data)
+        ctx = TransformContext()
+        assert metadata_transformer.transform(copied, ctx=ctx) == expected_key_value
+        assert ctx.serialized_replacements == []

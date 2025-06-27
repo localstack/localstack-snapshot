@@ -102,8 +102,14 @@ class ResponseMetaDataTransformer:
             if k == "ResponseMetadata":
                 metadata = v
                 http_headers = metadata.get("HTTPHeaders")
+                if not isinstance(http_headers, dict):
+                    continue
+
                 # TODO "x-amz-bucket-region"
                 # TestS3.test_region_header_exists -> verifies bucket-region
+
+                # FIXME: proper value is `content-type` with no underscore in lowercase, but this will necessitate a
+                #  refresh of all snapshots
                 headers_to_collect = ["content_type"]
                 simplified_headers = {}
                 for h in headers_to_collect:
