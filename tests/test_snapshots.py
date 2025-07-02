@@ -191,6 +191,137 @@ class TestSnapshotManager:
         sm.match("key1", [{"key2": "value1"}, "value2", 3])
         sm._assert_all()
 
+    def test_list_as_last_node_in_skip_verification_path(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"aaa": ["item1", "item2", "item3"]}}
+        sm.match(
+            "key_a",
+            {"aaa": ["item1", "different-value"]},
+        )
+
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        skip_path = ["$..aaa[1]", "$..aaa[2]"]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+        skip_path = ["$..aaa.1", "$..aaa.2"]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+    def test_list_as_last_node_in_skip_verification_path_complex(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {
+            "key_a": {
+                "aaa": [
+                    {"aab": ["aac", "aad"]},
+                    {"aab": ["aac", "aad"]},
+                    {"aab": ["aac", "aad"]},
+                ]
+            }
+        }
+        sm.match(
+            "key_a",
+            {
+                "aaa": [
+                    {"aab": ["aac", "bad-value"], "bbb": "value"},
+                    {"aab": ["aac", "aad", "bad-value"]},
+                    {"aab": ["bad-value", "aad"]},
+                ]
+            },
+        )
+
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        skip_path = [
+            "$..aaa[0].aab[1]",
+            "$..aaa[0].bbb",
+            "$..aaa[1].aab[2]",
+            "$..aaa[2].aab[0]",
+        ]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+        skip_path = [
+            "$..aaa.0..aab.1",
+            "$..aaa.0..bbb",
+            "$..aaa.1..aab.2",
+            "$..aaa.2..aab.0",
+        ]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+    def test_list_as_mid_node_in_skip_verification_path(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"aaa": [{"aab": "value1"}, {"aab": "value2"}]}}
+        sm.match(
+            "key_a",
+            {"aaa": [{"aab": "value1"}, {"aab": "bad-value"}]},
+        )
+
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        skip_path = ["$..aaa[1].aab"]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+        skip_path = ["$..aaa.1.aab"]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+    def test_list_as_last_node_in_skip_verification_path_nested(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {
+            "key_a": {
+                "aaa": [
+                    "bbb",
+                    "ccc",
+                    [
+                        "ddd",
+                        "eee",
+                        [
+                            "fff",
+                            "ggg",
+                        ],
+                    ],
+                ]
+            }
+        }
+        sm.match(
+            "key_a",
+            {
+                "aaa": [
+                    "bbb",
+                    "ccc",
+                    [
+                        "bad-value",
+                        "eee",
+                        [
+                            "fff",
+                            "ggg",
+                        ],
+                    ],
+                ]
+            },
+        )
+
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        skip_path = ["$..aaa[2][0]"]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+        skip_path = ["$..aaa.2[0]"]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+        # these 2 will actually skip almost everything, as they will match every first element of any list inside `aaa`
+        skip_path = ["$..aaa..[0]"]
+        sm._assert_all(skip_verification_paths=skip_path)
+
+        skip_path = ["$..aaa..0"]
+        sm._assert_all(skip_verification_paths=skip_path)
+
 
 def test_json_diff_format():
     path = ["Records", 1]

@@ -25,6 +25,8 @@ from .transformer_utility import TransformerUtility
 SNAPSHOT_LOGGER = logging.getLogger(__name__)
 SNAPSHOT_LOGGER.setLevel(logging.DEBUG if os.environ.get("DEBUG_SNAPSHOT") else logging.WARNING)
 
+_PLACEHOLDER_VALUE = "$__marker__$"
+
 
 class SnapshotMatchResult:
     def __init__(self, a: dict, b: dict, key: str = ""):
@@ -218,7 +220,7 @@ class SnapshotSession:
         self.skip_verification_paths = skip_verification_paths or []
         if skip_verification_paths:
             SNAPSHOT_LOGGER.warning(
-                f"Snapshot verification disabled for paths: {skip_verification_paths}"
+                "Snapshot verification disabled for paths: %s", skip_verification_paths
             )
 
         if self.update:
@@ -306,7 +308,7 @@ class SnapshotSession:
             try:
                 replaced_tmp[key] = json.loads(dumped_value)
             except JSONDecodeError:
-                SNAPSHOT_LOGGER.error(f"could not decode json-string:\n{tmp}")
+                SNAPSHOT_LOGGER.error("could not decode json-string:\n%s", tmp)
                 return {}
 
         return replaced_tmp
@@ -365,6 +367,21 @@ class SnapshotSession:
 
             return full_path_nodes[::-1][1:]  # reverse the list and remove Root()/$
 
+        def _remove_placeholder(_tmp):
+            """Traverse the object and remove any values in a list that would be equal to the placeholder"""
+            if isinstance(_tmp, dict):
+                for k, v in _tmp.items():
+                    if isinstance(v, dict):
+                        _remove_placeholder(v)
+                    elif isinstance(v, list):
+                        _tmp[k] = _remove_placeholder(v)
+            elif isinstance(_tmp, list):
+                return [_remove_placeholder(item) for item in _tmp if item != _PLACEHOLDER_VALUE]
+
+            return _tmp
+
+        has_placeholder = False
+
         for path in self.skip_verification_paths:
             matches = parse(path).find(tmp) or []
             for m in matches:
@@ -378,7 +395,24 @@ class SnapshotSession:
                             helper = helper.get(p, None)
                             if not helper:
                                 continue
+
                 if (
                     isinstance(helper, dict) and full_path[-1] in helper.keys()
                 ):  # might have been deleted already
                     del helper[full_path[-1]]
+                elif isinstance(helper, list):
+                    try:
+                        index = int(full_path[-1].lstrip("[").rstrip("]"))
+                        # we need to set a placeholder value as the skips are based on index
+                        # if we are to pop the values, the next skip index will have shifted and won't be correct
+                        helper[index] = _PLACEHOLDER_VALUE
+                        has_placeholder = True
+                    except ValueError:
+                        SNAPSHOT_LOGGER.warning(
+                            "Snapshot skip path '%s' was not applied as it was invalid for that snapshot",
+                            path,
+                            exc_info=SNAPSHOT_LOGGER.isEnabledFor(logging.DEBUG),
+                        )
+
+        if has_placeholder:
+            _remove_placeholder(tmp)
