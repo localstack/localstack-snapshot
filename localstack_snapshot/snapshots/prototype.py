@@ -25,7 +25,7 @@ from .transformer_utility import TransformerUtility
 SNAPSHOT_LOGGER = logging.getLogger(__name__)
 SNAPSHOT_LOGGER.setLevel(logging.DEBUG if os.environ.get("DEBUG_SNAPSHOT") else logging.WARNING)
 
-_PLACEHOLDER_VALUE = "$__marker__$"
+_SKIP_PLACEHOLDER_VALUE = "$__to_be_skipped__$"
 
 
 class SnapshotMatchResult:
@@ -376,7 +376,9 @@ class SnapshotSession:
                     elif isinstance(v, list):
                         _tmp[k] = _remove_placeholder(v)
             elif isinstance(_tmp, list):
-                return [_remove_placeholder(item) for item in _tmp if item != _PLACEHOLDER_VALUE]
+                return [
+                    _remove_placeholder(item) for item in _tmp if item != _SKIP_PLACEHOLDER_VALUE
+                ]
 
             return _tmp
 
@@ -405,7 +407,7 @@ class SnapshotSession:
                         index = int(full_path[-1].lstrip("[").rstrip("]"))
                         # we need to set a placeholder value as the skips are based on index
                         # if we are to pop the values, the next skip index will have shifted and won't be correct
-                        helper[index] = _PLACEHOLDER_VALUE
+                        helper[index] = _SKIP_PLACEHOLDER_VALUE
                         has_placeholder = True
                     except ValueError:
                         SNAPSHOT_LOGGER.warning(
