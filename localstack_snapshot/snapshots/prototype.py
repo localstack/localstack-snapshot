@@ -120,7 +120,7 @@ class SnapshotSession:
                         "recorded-content": self.observed_state,
                     }
                     full_state[self.scope_key] = recorded
-                    state_to_dump = json.dumps(full_state, indent=2)
+                    state_to_dump = json.dumps(full_state, indent=2, cls=CustomJsonEncoder)
                     fd.seek(0)
                     fd.truncate()
                     # add line ending to be compatible with pre-commit-hooks (end-of-file-fixer)
