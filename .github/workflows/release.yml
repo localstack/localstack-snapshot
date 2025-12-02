@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*.*
+
+jobs:
+  release-localstack-snapshot-job:
+    runs-on: ubuntu-latest
+    name: Release localstack-snapshot
+    permissions:
+      contents: write
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/p/localstack-snapshot
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Verify and build Python distribution
+        run: make install lint test dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
