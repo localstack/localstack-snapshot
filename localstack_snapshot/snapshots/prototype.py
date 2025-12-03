@@ -2,7 +2,9 @@ import io
 import json
 import logging
 import os
+from collections.abc import Iterator
 from datetime import datetime, timezone
+from enum import Enum
 from json import JSONDecodeError
 from pathlib import Path
 from re import Pattern
@@ -169,16 +171,27 @@ class SnapshotSession:
     def match_object(self, key: str, obj: object) -> None:
         def _convert_object_to_dict(obj_):
             if isinstance(obj_, dict):
-                for key in list(obj_.keys()):
-                    if key.startswith("_"):
-                        del obj_[key]
-                    else:
-                        obj_[key] = _convert_object_to_dict(obj_[key])
-            elif isinstance(obj_, list):
-                for idx, val in enumerate(obj_):
-                    obj_[idx] = _convert_object_to_dict(val)
+                # Serialize the values of the dictionary, while skipping any private keys (starting with '_')
+                return {
+                    key_: _convert_object_to_dict(obj_[key_])
+                    for key_ in obj_
+                    if not key_.startswith("_")
+                }
+            elif isinstance(obj_, (list, Iterator)):
+                return [_convert_object_to_dict(val) for val in obj_]
+            elif isinstance(obj_, Enum):
+                return obj_.value
             elif hasattr(obj_, "__dict__"):
-                return _convert_object_to_dict(obj_.__dict__)
+                # This is an object - let's try to convert it to a dictionary
+                # A  naive approach would be to use the '__dict__' object directly, but that only lists the attributes
+                # In order to also serialize the properties, we use the __dir__() method
+                # Filtering by everything that is not a method gives us both attributes and properties
+                # We also (still) skip private attributes/properties, so everything that starts with an underscore
+                return {
+                    k: _convert_object_to_dict(getattr(obj_, k))
+                    for k in obj_.__dir__()
+                    if not k.startswith("_") and type(getattr(obj_, k, "")).__name__ != "method"
+                }
             return obj_
 
         return self.match(key, _convert_object_to_dict(obj))

@@ -1,4 +1,5 @@
 import io
+from enum import Enum
 
 import pytest
 
@@ -72,6 +73,67 @@ class TestSnapshotManager:
 
         sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
         sm.recorded_state = {"key_a": {"name": "myname"}}
+        sm.match_object("key_a", CustomObject(name="myname"))
+        sm._assert_all()
+
+    def test_match_object_lists_and_iterators(self):
+        class CustomObject:
+            def __init__(self, name):
+                self.name = name
+                self.my_list = [9, 8, 7, 6, 5]
+                self.my_iterator = (x for x in range(5))
+
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {
+            "key_a": {"name": "myname", "my_iterator": [0, 1, 2, 3, 4], "my_list": [9, 8, 7, 6, 5]}
+        }
+        sm.match_object("key_a", CustomObject(name="myname"))
+        sm._assert_all()
+
+    def test_match_object_include_properties(self):
+        class CustomObject:
+            def __init__(self, name):
+                self.name = name
+                self._internal = "n/a"
+
+            def some_method(self):
+                # method should not be serialized
+                return False
+
+            @property
+            def some_prop(self):
+                # properties should be serialized
+                return True
+
+            @property
+            def some_iterator(self):
+                for i in range(3):
+                    yield i
+
+            @property
+            def _private_prop(self):
+                # private properties should be ignored
+                return False
+
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {
+            "key_a": {"name": "myname", "some_prop": True, "some_iterator": [0, 1, 2]}
+        }
+        sm.match_object("key_a", CustomObject(name="myname"))
+        sm._assert_all()
+
+    def test_match_object_enums(self):
+        class TestEnum(Enum):
+            value1 = "Value 1"
+            value2 = "Value 2"
+
+        class CustomObject:
+            def __init__(self, name):
+                self.name = name
+                self.my_enum = TestEnum.value2
+
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"name": "myname", "my_enum": "Value 2"}}
         sm.match_object("key_a", CustomObject(name="myname"))
         sm._assert_all()
 
