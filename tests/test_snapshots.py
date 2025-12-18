@@ -137,6 +137,21 @@ class TestSnapshotManager:
         sm.match_object("key_a", CustomObject(name="myname"))
         sm._assert_all()
 
+    def test_match_object_with_identity_function(self):
+        class CustomObject:
+            def __init__(self, name):
+                self.name = name
+
+            @property
+            def me_myself_and_i(self):
+                # This would lead to a RecursionError, so we cannot snapshot this method
+                return self
+
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"name": "myname"}}
+        sm.match_object("key_a", CustomObject(name="myname"))
+        sm._assert_all()
+
     def test_match_object_change(self):
         class CustomObject:
             def __init__(self, name):
