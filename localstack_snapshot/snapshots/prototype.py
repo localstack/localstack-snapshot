@@ -183,14 +183,21 @@ class SnapshotSession:
                 return obj_.value
             elif hasattr(obj_, "__dict__"):
                 # This is an object - let's try to convert it to a dictionary
-                # A  naive approach would be to use the '__dict__' object directly, but that only lists the attributes
+                # A naive approach would be to use the '__dict__' object directly, but that only lists the attributes.
                 # In order to also serialize the properties, we use the __dir__() method
                 # Filtering by everything that is not a method gives us both attributes and properties
-                # We also (still) skip private attributes/properties, so everything that starts with an underscore
+                # We also (still) skip private attributes/properties, so everything that starts with an underscore.
                 return {
                     k: _convert_object_to_dict(getattr(obj_, k))
                     for k in obj_.__dir__()
-                    if not k.startswith("_") and type(getattr(obj_, k, "")).__name__ != "method"
+                    if (
+                        # Skip private attributes
+                        not k.startswith("_")
+                        # Skip everything that's not a method
+                        and type(getattr(obj_, k, "")).__name__ != "method"
+                        # Skip everything that refers to itself (identity functions), as that leads to recursion
+                        and getattr(obj_, k) != obj_
+                    )
                 }
             return obj_
 
