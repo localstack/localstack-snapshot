@@ -217,7 +217,7 @@ class SnapshotSession:
 
         if not self.update and (not self.recorded_state or self.recorded_state.get(key) is None):
             raise Exception(
-                f"No state for {self.scope_key} recorded. Please (re-)generate the snapshot for this test."
+                f"No state for {key} recorded. Please (re-)generate the snapshot for this test."
             )
 
         # TODO: we should return something meaningful here
