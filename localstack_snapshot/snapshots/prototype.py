@@ -239,7 +239,7 @@ class SnapshotSession:
 
         self.skip_verification_paths = skip_verification_paths or []
         if skip_verification_paths:
-            SNAPSHOT_LOGGER.warning(
+            SNAPSHOT_LOGGER.debug(
                 "Snapshot verification disabled for paths: %s", skip_verification_paths
             )
 
