@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 from typing import Optional
 
 import pytest
@@ -97,6 +98,25 @@ def pytest_runtest_call(item: Item) -> None:
         sm._assert_all(verify, paths)
 
 
+def package_scoped_nodeid(item: Item) -> str:
+    """The item's nodeid relative to its enclosing package, independent of pytest's rootdir.
+
+    Snapshot entries are keyed by the pytest nodeid, which is relative to pytest's rootdir.
+    The committed ``*.snapshot.json`` / ``*.validation.json`` files assume the rootdir is the
+    package containing the test (``tests/...::<test>``), but pytest can be invoked with a
+    different rootdir — VS Code's test runner, for example, pins ``--rootdir=<workspace folder>``,
+    which prefixes every nodeid with the package directory and makes every lookup of a recorded
+    entry miss. Keying by the nodeid relative to the nearest enclosing ``pyproject.toml`` keeps
+    the entries stable no matter where pytest was started from.
+    """
+    path = Path(item.path)
+    for parent in path.parents:
+        if (parent / "pyproject.toml").is_file():
+            _, separator, remainder = item.nodeid.partition("::")
+            return path.relative_to(parent).as_posix() + separator + remainder
+    return item.nodeid
+
+
 @pytest.fixture(scope="function")
 def _snapshot_session(request: SubRequest):
     update_overwrite = os.environ.get("SNAPSHOT_UPDATE") == "1"
@@ -104,7 +124,7 @@ def _snapshot_session(request: SubRequest):
 
     sm = SnapshotSession(
         base_file_path=os.path.join(request.fspath.dirname, request.fspath.purebasename),
-        scope_key=request.node.nodeid,
+        scope_key=package_scoped_nodeid(request.node),
         update=update_overwrite or request.config.option.snapshot_update,
         raw=raw_overwrite or request.config.option.snapshot_raw,
         verify=False if request.config.option.snapshot_skip_all else True,
