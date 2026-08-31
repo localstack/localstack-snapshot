@@ -112,6 +112,8 @@ def package_scoped_nodeid(item: Item) -> str:
     path = Path(item.path)
     for parent in path.parents:
         if (parent / "pyproject.toml").is_file():
+            # Partition splits by the first occurance and also returns the partition itself
+            # "tests/test_thing.py::TestThing::test_case".partition("::") == ("tests/test_thing.py", "::", "TestThing::test_case")
             _, separator, remainder = item.nodeid.partition("::")
             return path.relative_to(parent).as_posix() + separator + remainder
     return item.nodeid
