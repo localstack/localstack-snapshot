@@ -28,10 +28,10 @@ dynamic = ["readme"]
 
 [project.optional-dependencies]
 dev = [
-    "black==23.10.0",
-    "pytest>=7.0",
-    "coverage[toml]>=5.0.0",
-    "ruff==0.1.0"
+    "black==26.5.1",
+    "pytest>=9.1.1",
+    "coverage[toml]>=7.15.4",
+    "ruff==0.16.5"
 ]
 
 [tool.setuptools]
@@ -56,11 +56,6 @@ include = '((localstack_snapshot)/.*\.py$|tests/.*\.py$)'
 # Always generate Python 3.10-compatible code.
 target-version = "py310"
 line-length = 110
-select = ["B", "C", "E", "F", "I", "W", "T", "B9"]
-ignore = [
-    "E501", # E501 Line too long - handled by black, see https://docs.astral.sh/ruff/faq/#is-ruff-compatible-with-black
-    "C901", # C901 complex-structure - later refactoring will handle this, see https://docs.astral.sh/ruff/rules/complex-structure/#complex-structure-c901
-]
 exclude = [
     ".venv*",
     "venv*",
@@ -69,4 +64,10 @@ exclude = [
     "target",
     "*.egg-info",
     ".git",
+]
+[tool.ruff.lint]
+select = ["B", "C", "E", "F", "I", "W", "T", "B9"]
+ignore = [
+    "E501", # E501 Line too long - handled by black, see https://docs.astral.sh/ruff/faq/#is-ruff-compatible-with-black
+    "C901", # C901 complex-structure - later refactoring will handle this, see https://docs.astral.sh/ruff/rules/complex-structure/#complex-structure-c901
 ]
