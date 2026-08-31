@@ -89,8 +89,7 @@ def _register_serialized_reference_replacement(
 
 
 class Transformer(Protocol):
-    def transform(self, input_data: dict, *, ctx: TransformContext) -> dict:
-        ...
+    def transform(self, input_data: dict, *, ctx: TransformContext) -> dict: ...
 
 
 # Transformers
