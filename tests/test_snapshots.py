@@ -399,6 +399,45 @@ class TestSnapshotManager:
         skip_path = ["$..aaa..0"]
         sm._assert_all(skip_verification_paths=skip_path)
 
+    @pytest.mark.parametrize(
+        "key",
+        ["with space", "Key%", "00", "10", "a.b", "aws:SourceArn", "Ünïcode", "x-amz-id"],
+    )
+    def test_special_characters_in_skip_verification_path(self, key):
+        def _new_session():
+            # use a new session for every assertion, as skipping mutates the recorded and observed state
+            sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+            sm.recorded_state = {
+                "key_a": {key: {"Inner": [{key: "value", "other": "same"}]}, "aaa": "same"}
+            }
+            sm.match(
+                "key_a", {key: {"Inner": [{key: "bad-value", "other": "same"}]}, "aaa": "same"}
+            )
+            return sm
+
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            _new_session()._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        # the key is used as an intermediate node as well as the last node
+        _new_session()._assert_all(skip_verification_paths=[f"$..'{key}'.Inner[0].'{key}'"])
+        _new_session()._assert_all(skip_verification_paths=[f"$..Inner[*].'{key}'"])
+        _new_session()._assert_all(skip_verification_paths=[f"$..'{key}'"])
+
+    def test_skip_verification_path_with_filter(self):
+        def _new_session():
+            sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+            sm.recorded_state = {"key_a": {"aaa": [{"id": "1", "v": "a"}, {"id": "2", "v": "b"}]}}
+            sm.match("key_a", {"aaa": [{"id": "1", "v": "a"}, {"id": "2", "v": "bad-value"}]})
+            return sm
+
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            _new_session()._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        _new_session()._assert_all(skip_verification_paths=["$..aaa[?(@.id == '2')].v"])
+        _new_session()._assert_all(skip_verification_paths=["$..aaa[?(@.id == '2')]"])
+
 
 def test_json_diff_format():
     path = ["Records", 1]
