@@ -11,7 +11,7 @@ from re import Pattern
 from typing import Dict, List, Optional
 
 from deepdiff import DeepDiff
-from jsonpath_ng import DatumInContext
+from jsonpath_ng import Fields, Index
 from jsonpath_ng.ext import parse
 
 from localstack_snapshot.snapshots.transformer import (
@@ -377,16 +377,6 @@ class SnapshotSession:
     def _remove_skip_verification_paths(self, tmp: Dict):
         """Removes all keys from the dict, that match the given json-paths in self.skip_verification_path"""
 
-        def build_full_path_nodes(field_match: DatumInContext):
-            """Traverse the matched Datum to build the path field by field"""
-            full_path_nodes = [str(field_match.path).replace("'", "")]
-            next_node = field_match
-            while next_node.context is not None:
-                full_path_nodes.append(str(next_node.context.path))
-                next_node = next_node.context
-
-            return full_path_nodes[::-1][1:]  # reverse the list and remove Root()/$
-
         def _remove_placeholder(_tmp):
             """Traverse the object and remove any values in a list that would be equal to the placeholder"""
             if isinstance(_tmp, dict):
@@ -407,34 +397,22 @@ class SnapshotSession:
         for path in self.skip_verification_paths:
             matches = parse(path).find(tmp) or []
             for m in matches:
-                full_path = build_full_path_nodes(m)
-                helper = tmp
-                if len(full_path) > 1:
-                    for p in full_path[:-1]:
-                        if isinstance(helper, list) and p.lstrip("[").rstrip("]").isnumeric():
-                            helper = helper[int(p.lstrip("[").rstrip("]"))]
-                        elif isinstance(helper, dict):
-                            helper = helper.get(p, None)
-                            if not helper:
-                                continue
-
-                if (
-                    isinstance(helper, dict) and full_path[-1] in helper.keys()
-                ):  # might have been deleted already
-                    del helper[full_path[-1]]
-                elif isinstance(helper, list):
-                    try:
-                        index = int(full_path[-1].lstrip("[").rstrip("]"))
+                # the context holds a reference to the container of the matched value, we can mutate it directly
+                parent = m.context.value if m.context is not None else None
+                if isinstance(parent, dict) and isinstance(m.path, Fields):
+                    for key in m.path.fields:
+                        parent.pop(key, None)  # might have been deleted already
+                elif isinstance(parent, list) and isinstance(m.path, Index):
+                    for index in m.path.indices:
                         # we need to set a placeholder value as the skips are based on index
                         # if we are to pop the values, the next skip index will have shifted and won't be correct
-                        helper[index] = _SKIP_PLACEHOLDER_VALUE
+                        parent[index] = _SKIP_PLACEHOLDER_VALUE
                         has_placeholder = True
-                    except ValueError:
-                        SNAPSHOT_LOGGER.warning(
-                            "Snapshot skip path '%s' was not applied as it was invalid for that snapshot",
-                            path,
-                            exc_info=SNAPSHOT_LOGGER.isEnabledFor(logging.DEBUG),
-                        )
+                elif isinstance(parent, (dict, list)):
+                    SNAPSHOT_LOGGER.warning(
+                        "Snapshot skip path '%s' was not applied as it was invalid for that snapshot",
+                        path,
+                    )
 
         if has_placeholder:
             _remove_placeholder(tmp)
