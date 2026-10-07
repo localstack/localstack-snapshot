@@ -1,3 +1,4 @@
+import copy
 import io
 from enum import Enum
 
@@ -268,136 +269,121 @@ class TestSnapshotManager:
         sm.match("key1", [{"key2": "value1"}, "value2", 3])
         sm._assert_all()
 
-    def test_list_as_last_node_in_skip_verification_path(self):
+    # skipping mutates the recorded and observed state, so every assertion needs a new session
+
+    @staticmethod
+    def _new_session(recorded: dict, observed: dict) -> SnapshotSession:
         sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
-        sm.recorded_state = {"key_a": {"aaa": ["item1", "item2", "item3"]}}
-        sm.match(
-            "key_a",
-            {"aaa": ["item1", "different-value"]},
-        )
+        sm.recorded_state = {"key_a": copy.deepcopy(recorded)}
+        sm.match("key_a", copy.deepcopy(observed))
+        return sm
+
+    @pytest.mark.parametrize(
+        "skip_path",
+        [["$..aaa[1]", "$..aaa[2]"], ["$..aaa.1", "$..aaa.2"]],
+        ids=["brackets", "dot"],
+    )
+    def test_list_as_last_node_in_skip_verification_path(self, skip_path):
+        recorded = {"aaa": ["item1", "item2", "item3"]}
+        observed = {"aaa": ["item1", "different-value"]}
 
         with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
-            sm._assert_all()
+            self._new_session(recorded, observed)._assert_all()
         ctx.match("Parity snapshot failed")
 
-        skip_path = ["$..aaa[1]", "$..aaa[2]"]
-        sm._assert_all(skip_verification_paths=skip_path)
+        self._new_session(recorded, observed)._assert_all(skip_verification_paths=skip_path)
 
-        skip_path = ["$..aaa.1", "$..aaa.2"]
-        sm._assert_all(skip_verification_paths=skip_path)
-
-    def test_list_as_last_node_in_skip_verification_path_complex(self):
-        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
-        sm.recorded_state = {
-            "key_a": {
-                "aaa": [
-                    {"aab": ["aac", "aad"]},
-                    {"aab": ["aac", "aad"]},
-                    {"aab": ["aac", "aad"]},
-                ]
-            }
+    @pytest.mark.parametrize(
+        "skip_path",
+        [
+            [
+                "$..aaa[0].aab[1]",
+                "$..aaa[0].bbb",
+                "$..aaa[1].aab[2]",
+                "$..aaa[2].aab[0]",
+            ],
+            [
+                "$..aaa.0..aab.1",
+                "$..aaa.0..bbb",
+                "$..aaa.1..aab.2",
+                "$..aaa.2..aab.0",
+            ],
+        ],
+        ids=["brackets", "dot"],
+    )
+    def test_list_as_last_node_in_skip_verification_path_complex(self, skip_path):
+        recorded = {
+            "aaa": [
+                {"aab": ["aac", "aad"]},
+                {"aab": ["aac", "aad"]},
+                {"aab": ["aac", "aad"]},
+            ]
         }
-        sm.match(
-            "key_a",
-            {
-                "aaa": [
-                    {"aab": ["aac", "bad-value"], "bbb": "value"},
-                    {"aab": ["aac", "aad", "bad-value"]},
-                    {"aab": ["bad-value", "aad"]},
-                ]
-            },
-        )
-
-        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
-            sm._assert_all()
-        ctx.match("Parity snapshot failed")
-
-        skip_path = [
-            "$..aaa[0].aab[1]",
-            "$..aaa[0].bbb",
-            "$..aaa[1].aab[2]",
-            "$..aaa[2].aab[0]",
-        ]
-        sm._assert_all(skip_verification_paths=skip_path)
-
-        skip_path = [
-            "$..aaa.0..aab.1",
-            "$..aaa.0..bbb",
-            "$..aaa.1..aab.2",
-            "$..aaa.2..aab.0",
-        ]
-        sm._assert_all(skip_verification_paths=skip_path)
-
-    def test_list_as_mid_node_in_skip_verification_path(self):
-        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
-        sm.recorded_state = {"key_a": {"aaa": [{"aab": "value1"}, {"aab": "value2"}]}}
-        sm.match(
-            "key_a",
-            {"aaa": [{"aab": "value1"}, {"aab": "bad-value"}]},
-        )
-
-        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
-            sm._assert_all()
-        ctx.match("Parity snapshot failed")
-
-        skip_path = ["$..aaa[1].aab"]
-        sm._assert_all(skip_verification_paths=skip_path)
-
-        skip_path = ["$..aaa.1.aab"]
-        sm._assert_all(skip_verification_paths=skip_path)
-
-    def test_list_as_last_node_in_skip_verification_path_nested(self):
-        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
-        sm.recorded_state = {
-            "key_a": {
-                "aaa": [
-                    "bbb",
-                    "ccc",
-                    [
-                        "ddd",
-                        "eee",
-                        [
-                            "fff",
-                            "ggg",
-                        ],
-                    ],
-                ]
-            }
+        observed = {
+            "aaa": [
+                {"aab": ["aac", "bad-value"], "bbb": "value"},
+                {"aab": ["aac", "aad", "bad-value"]},
+                {"aab": ["bad-value", "aad"]},
+            ]
         }
-        sm.match(
-            "key_a",
-            {
-                "aaa": [
-                    "bbb",
-                    "ccc",
-                    [
-                        "bad-value",
-                        "eee",
-                        [
-                            "fff",
-                            "ggg",
-                        ],
-                    ],
-                ]
-            },
-        )
 
         with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
-            sm._assert_all()
+            self._new_session(recorded, observed)._assert_all()
         ctx.match("Parity snapshot failed")
 
-        skip_path = ["$..aaa[2][0]"]
-        sm._assert_all(skip_verification_paths=skip_path)
+        self._new_session(recorded, observed)._assert_all(skip_verification_paths=skip_path)
 
-        skip_path = ["$..aaa.2[0]"]
-        sm._assert_all(skip_verification_paths=skip_path)
+    @pytest.mark.parametrize(
+        "skip_path", [["$..aaa[1].aab"], ["$..aaa.1.aab"]], ids=["brackets", "dot"]
+    )
+    def test_list_as_mid_node_in_skip_verification_path(self, skip_path):
+        recorded = {"aaa": [{"aab": "value1"}, {"aab": "value2"}]}
+        observed = {"aaa": [{"aab": "value1"}, {"aab": "bad-value"}]}
 
-        # these 2 will actually skip almost everything, as they will match every first element of any list inside `aaa`
-        skip_path = ["$..aaa..[0]"]
-        sm._assert_all(skip_verification_paths=skip_path)
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            self._new_session(recorded, observed)._assert_all()
+        ctx.match("Parity snapshot failed")
 
-        skip_path = ["$..aaa..0"]
-        sm._assert_all(skip_verification_paths=skip_path)
+        self._new_session(recorded, observed)._assert_all(skip_verification_paths=skip_path)
+
+    @pytest.mark.parametrize(
+        "skip_path",
+        [
+            ["$..aaa[2][0]"],
+            ["$..aaa.2[0]"],
+            # these 2 will actually skip almost everything, as they will match every first element of any list inside `aaa`
+            ["$..aaa..[0]"],
+            ["$..aaa..0"],
+        ],
+    )
+    def test_list_as_last_node_in_skip_verification_path_nested(self, skip_path):
+        recorded = {"aaa": ["bbb", "ccc", ["ddd", "eee", ["fff", "ggg"]]]}
+        observed = {"aaa": ["bbb", "ccc", ["bad-value", "eee", ["fff", "ggg"]]]}
+
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            self._new_session(recorded, observed)._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        self._new_session(recorded, observed)._assert_all(skip_verification_paths=skip_path)
+
+    @pytest.mark.parametrize("skip_path", [["$..aaa.10"], ["$..aaa.'10'"], ["$..'10'"]])
+    def test_numeric_dict_key_in_skip_verification_path(self, skip_path):
+        recorded = {"aaa": {"10": "value", "1": "same"}, "bbb": ["same", "same"]}
+        observed = {"aaa": {"10": "bad-value", "1": "same"}, "bbb": ["same", "same"]}
+
+        with pytest.raises(Exception) as ctx:  # asserts it fail without skipping
+            self._new_session(recorded, observed)._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        self._new_session(recorded, observed)._assert_all(skip_verification_paths=skip_path)
+
+    def test_dot_index_out_of_range_in_skip_verification_path(self):
+        recorded = {"aaa": ["item1"]}
+        observed = {"aaa": ["bad-value"]}
+
+        with pytest.raises(Exception) as ctx:  # asserts the skip path does not match anything
+            self._new_session(recorded, observed)._assert_all(skip_verification_paths=["$..aaa.5"])
+        ctx.match("Parity snapshot failed")
 
     @pytest.mark.parametrize(
         "key",

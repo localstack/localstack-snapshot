@@ -11,7 +11,7 @@ from re import Pattern
 from typing import Dict, List, Optional
 
 from deepdiff import DeepDiff
-from jsonpath_ng import Fields, Index
+from jsonpath_ng import DatumInContext, Fields, Index, JSONPath
 from jsonpath_ng.ext import parse
 
 from localstack_snapshot.snapshots.transformer import (
@@ -28,6 +28,37 @@ SNAPSHOT_LOGGER = logging.getLogger(__name__)
 SNAPSHOT_LOGGER.setLevel(logging.DEBUG if os.environ.get("DEBUG_SNAPSHOT") else logging.WARNING)
 
 _SKIP_PLACEHOLDER_VALUE = "$__to_be_skipped__$"
+
+
+class _FieldOrIndex(Fields):
+    """
+    Numeric field, which is used as a list index if the datum is a list, e.g. `$..aaa.1`.
+    jsonpath-ng only matches `Fields` against dicts, and `$.a.1` and `$.a.'1'` are parsed identically,
+    so the decision needs to happen when matching the datum.
+    """
+
+    def find(self, datum):
+        datum = DatumInContext.wrap(datum)
+        if isinstance(datum.value, list):
+            return Index(int(self.fields[0])).find(datum)
+        return super().find(datum)
+
+
+def _parse_skip_verification_path(path: str) -> JSONPath:
+    """
+    Parses the jsonpath, and allows the dot notation for list indices.
+    Note: consecutive indices like `$..aaa.2.0` cannot be parsed, as `2.0` is lexed as a float. Use `$..aaa.2[0]` instead.
+    """
+
+    def _replace_numeric_fields(node):
+        if isinstance(node, Fields) and len(node.fields) == 1 and node.fields[0].isdecimal():
+            return _FieldOrIndex(*node.fields)
+        for attr, value in vars(node).items():
+            if isinstance(value, JSONPath):
+                setattr(node, attr, _replace_numeric_fields(value))
+        return node
+
+    return _replace_numeric_fields(parse(path))
 
 
 class SnapshotMatchResult:
@@ -395,7 +426,7 @@ class SnapshotSession:
         has_placeholder = False
 
         for path in self.skip_verification_paths:
-            matches = parse(path).find(tmp) or []
+            matches = _parse_skip_verification_path(path).find(tmp) or []
             for m in matches:
                 # the context holds a reference to the container of the matched value, we can mutate it directly
                 parent = m.context.value if m.context is not None else None
