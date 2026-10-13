@@ -10,16 +10,15 @@ authors = [
 version = "0.3.5"
 description = "Extracted snapshot testing lib for LocalStack"
 dependencies = [
-    "jsonpath-ng>1.6",
+    "jsonpath-ng>=1.9",
     "deepdiff",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {file = "LICENSE"}
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
@@ -53,8 +52,8 @@ include = '((localstack_snapshot)/.*\.py$|tests/.*\.py$)'
 #extend_exclude = '()'
 
 [tool.ruff]
-# Always generate Python 3.10-compatible code.
-target-version = "py310"
+# Always generate Python 3.11-compatible code.
+target-version = "py311"
 line-length = 110
 exclude = [
     ".venv*",
