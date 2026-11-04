@@ -34,7 +34,9 @@ class SnapshotMatchResult:
     def __init__(self, a: dict, b: dict, key: str = ""):
         self.a = a
         self.b = b
-        self.result = DeepDiff(a, b, verbose_level=2, view="tree")
+        # DeepDiff skips keys starting with "__" by default (ignore_private_variables=True),
+        # which would leave e.g. "__type" or GraphQL "__typename" / "__schema" unverified
+        self.result = DeepDiff(a, b, verbose_level=2, view="tree", ignore_private_variables=False)
         self.key = key
 
     def __bool__(self) -> bool:
