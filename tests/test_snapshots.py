@@ -241,6 +241,46 @@ class TestSnapshotManager:
         sm.match("key_a", {"aaa": "helloo", "aab": "this is a test", "b": {"aaa": "another test"}})
         sm._assert_all()
 
+    def test_dunder_key_change(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"__type": "ResourceNotFoundException"}}
+        sm.match("key_a", {"__type": "ValidationException"})
+        with pytest.raises(Exception) as ctx:
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
+    def test_dunder_key_nochange(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"data": {"__schema": {"types": [{"__typename": "A"}]}}}}
+        sm.match("key_a", {"data": {"__schema": {"types": [{"__typename": "A"}]}}})
+        sm._assert_all()
+
+    def test_nested_dunder_key_change(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"data": {"__schema": {"directives": ["defer"]}}}}
+        sm.match("key_a", {"data": {"__schema": {"directives": ["oneOf"]}}})
+        with pytest.raises(Exception) as ctx:
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
+    def test_dunder_key_in_list_change(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"items": [{"__typename": "Post"}]}}
+        sm.match("key_a", {"items": [{"__typename": "Comment"}]})
+        with pytest.raises(Exception) as ctx:
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
+    def test_dunder_key_skip_verification_path(self):
+        sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
+        sm.recorded_state = {"key_a": {"Error": {"__type": "A", "Message": "msg"}}}
+        sm.match("key_a", {"Error": {"__type": "B", "Message": "msg"}})
+        with pytest.raises(Exception) as ctx:
+            sm._assert_all()
+        ctx.match("Parity snapshot failed")
+
+        sm._assert_all(skip_verification_paths=["$..__type"])
+
     def test_dot_in_skip_verification_path(self):
         sm = SnapshotSession(scope_key="A", verify=True, base_file_path="", update=False)
         sm.recorded_state = {
